@@ -1,58 +1,60 @@
 // 1. Import necessari
-import { Component } from "react";
+import { useState } from "react"; // ← NUOVO: useState hook
 import { Form, Button, Alert } from "react-bootstrap";
 
-// ⭐ Token API (stesso di CommentArea)
+// ⭐ Token API
 const API_TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OTBkZWU2OTcxNDM4ZjAwMTVkMzJhODUiLCJpYXQiOjE3NjM2NTExMTIsImV4cCI6MTc2NDg2MDcxMn0.Pyas5j_xt6OdvEzkWVOMy9EXrBumAtF_TKlFX6a9A3k";
 
-// 2. Componente CLASSE (serve state per il form)
-class AddComment extends Component {
-  // 3. STATE iniziale del form
-  state = {
-    comment: "", // Testo del commento
-    rate: "5", // Voto (default 5)
-    isSubmitting: false, // Stato di invio
-    successMsg: "", // Messaggio di successo
-    errMsg: "", // Messaggio di errore
+// 2. Componente FUNZIONALE
+const AddComment = ({ asin, onCommentAdded }) => {
+  // 3. STATE UNICO per tutto il form (come suggerito dall'esercizio)
+  const [formState, setFormState] = useState({
+    comment: "",
+    rate: "5",
+    isSubmitting: false,
+    successMsg: "",
+    errMsg: "",
+  });
+
+  // 4. Handler generico per i campi del form
+  const handleInputChange = (field, value) => {
+    setFormState({
+      ...formState, // ← Mantieni tutti i valori esistenti
+      [field]: value, // ← Aggiorna solo il campo specifico
+    });
   };
 
-  // 4. Handler per il cambio del campo "comment"
-  handleCommentChange = (e) => {
-    this.setState({ comment: e.target.value });
-  };
+  // 5. Handler per il submit del form
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // 5. Handler per il cambio del campo "rate"
-  handleRateChange = (e) => {
-    this.setState({ rate: e.target.value });
-  };
-
-  // 6. Handler per il submit del form
-  handleSubmit = async (e) => {
-    e.preventDefault(); // Previene il reload della pagina
-
-    // Validazione: commento non può essere vuoto
-    if (this.state.comment.trim() === "") {
-      this.setState({ errMsg: "Il commento non può essere vuoto!" });
+    // Validazione
+    if (formState.comment.trim() === "") {
+      setFormState({
+        ...formState,
+        errMsg: "Il commento non può essere vuoto!",
+      });
       return;
     }
 
-    // 7. Prepariamo i dati da inviare
+    // Prepara i dati
     const newComment = {
-      comment: this.state.comment,
-      rate: this.state.rate,
-      elementId: this.props.asin, // ASIN del libro (ricevuto da props)
+      comment: formState.comment,
+      rate: formState.rate,
+      elementId: asin,
     };
 
-    // 8. Mostriamo lo stato di caricamento
-    this.setState({
+    // Imposta stato di caricamento
+    setFormState({
+      ...formState,
       isSubmitting: true,
       errMsg: "",
       successMsg: "",
     });
 
     try {
-      // 9. Facciamo la POST
+      // POST request
       const response = await fetch(
         "https://striveschool-api.herokuapp.com/api/comments/",
         {
@@ -65,10 +67,10 @@ class AddComment extends Component {
         }
       );
 
-      // 10. Verifichiamo la risposta
+      // Verifica risposta
       if (response.ok) {
         // Successo! Reset del form
-        this.setState({
+        setFormState({
           comment: "",
           rate: "5",
           isSubmitting: false,
@@ -76,15 +78,15 @@ class AddComment extends Component {
           errMsg: "",
         });
 
-        // 11. Notifichiamo il padre (CommentArea) per ricaricare i commenti
-        // Questo chiamerà la funzione passata come prop
-        if (this.props.onCommentAdded) {
-          this.props.onCommentAdded();
+        // Notifica il padre per ricaricare i commenti
+        if (onCommentAdded) {
+          onCommentAdded();
         }
       } else {
         // Errore HTTP
         const errorData = await response.json();
-        this.setState({
+        setFormState({
+          ...formState,
           isSubmitting: false,
           errMsg: `Errore ${response.status}: ${
             errorData.message || response.statusText
@@ -93,71 +95,70 @@ class AddComment extends Component {
       }
     } catch (err) {
       // Errore di rete
-      this.setState({
+      setFormState({
+        ...formState,
         isSubmitting: false,
         errMsg: `Errore: ${err.message}`,
       });
     }
   };
 
-  // 12. RENDER
-  render() {
-    const { comment, rate, isSubmitting, successMsg, errMsg } = this.state;
+  // 6. Render
+  return (
+    <div className="mt-4">
+      <h6 className="mb-3">✍️ Lascia una recensione</h6>
 
-    return (
-      <div className="mt-4">
-        <h6 className="mb-3">✍️ Lascia una recensione</h6>
+      {/* Messaggio di successo */}
+      {formState.successMsg && (
+        <Alert variant="success">{formState.successMsg}</Alert>
+      )}
 
-        {/* Messaggio di successo */}
-        {successMsg && <Alert variant="success">{successMsg}</Alert>}
+      {/* Messaggio di errore */}
+      {formState.errMsg && <Alert variant="danger">{formState.errMsg}</Alert>}
 
-        {/* Messaggio di errore */}
-        {errMsg && <Alert variant="danger">{errMsg}</Alert>}
+      {/* Form */}
+      <Form onSubmit={handleSubmit}>
+        {/* Campo: Commento */}
+        <Form.Group className="mb-3">
+          <Form.Label>Commento</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            placeholder="Scrivi la tua recensione..."
+            value={formState.comment}
+            onChange={(e) => handleInputChange("comment", e.target.value)}
+            disabled={formState.isSubmitting}
+          />
+        </Form.Group>
 
-        {/* Form */}
-        <Form onSubmit={this.handleSubmit}>
-          {/* Campo: Commento */}
-          <Form.Group className="mb-3">
-            <Form.Label>Commento</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              placeholder="Scrivi la tua recensione..."
-              value={comment}
-              onChange={this.handleCommentChange}
-              disabled={isSubmitting}
-            />
-          </Form.Group>
-
-          {/* Campo: Voto */}
-          <Form.Group className="mb-3">
-            <Form.Label>Voto</Form.Label>
-            <Form.Select
-              value={rate}
-              onChange={this.handleRateChange}
-              disabled={isSubmitting}
-            >
-              <option value="1">⭐ 1 - Pessimo</option>
-              <option value="2">⭐⭐ 2 - Scarso</option>
-              <option value="3">⭐⭐⭐ 3 - Sufficiente</option>
-              <option value="4">⭐⭐⭐⭐ 4 - Buono</option>
-              <option value="5">⭐⭐⭐⭐⭐ 5 - Eccellente</option>
-            </Form.Select>
-          </Form.Group>
-
-          {/* Bottone Submit */}
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isSubmitting}
-            className="w-100"
+        {/* Campo: Voto */}
+        <Form.Group className="mb-3">
+          <Form.Label>Voto</Form.Label>
+          <Form.Select
+            value={formState.rate}
+            onChange={(e) => handleInputChange("rate", e.target.value)}
+            disabled={formState.isSubmitting}
           >
-            {isSubmitting ? "Invio in corso..." : "Invia Recensione"}
-          </Button>
-        </Form>
-      </div>
-    );
-  }
-}
+            <option value="1">⭐ 1 - Pessimo</option>
+            <option value="2">⭐⭐ 2 - Scarso</option>
+            <option value="3">⭐⭐⭐ 3 - Sufficiente</option>
+            <option value="4">⭐⭐⭐⭐ 4 - Buono</option>
+            <option value="5">⭐⭐⭐⭐⭐ 5 - Eccellente</option>
+          </Form.Select>
+        </Form.Group>
+
+        {/* Bottone Submit */}
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={formState.isSubmitting}
+          className="w-100"
+        >
+          {formState.isSubmitting ? "Invio in corso..." : "Invia Recensione"}
+        </Button>
+      </Form>
+    </div>
+  );
+};
 
 export default AddComment;
