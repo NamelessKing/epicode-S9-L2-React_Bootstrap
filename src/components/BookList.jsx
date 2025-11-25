@@ -2,12 +2,14 @@
 import { Component } from "react";
 import { Container, Row, Col, Form } from "react-bootstrap"; // ← Aggiungo Form
 import SingleBook from "./SingleBook";
+import CommentArea from "./CommentArea";
 
 // STEP 2: Convertiamo da funzione a CLASSE
 class BookList extends Component {
   // STEP 3: Aggiungiamo lo STATE
   state = {
-    searchQuery: "", // Stringa di ricerca (inizialmente vuota)
+    searchQuery: "", // Stringa di ricerca
+    selectedAsin: null, // ASIN del libro selezionato (null = nessuno)
   };
 
   // STEP 4: Metodo per gestire il cambio dell'input
@@ -18,13 +20,26 @@ class BookList extends Component {
     });
   };
 
+  // Metodo per gestire la selezione di un libro
+  handleBookSelect = (asin) => {
+    // asin = l'ASIN del libro che è stato cliccato
+
+    // Se il libro cliccato è già selezionato, lo deselezioniamo
+    if (this.state.selectedAsin === asin) {
+      this.setState({ selectedAsin: null });
+    } else {
+      // Altrimenti, lo selezioniamo
+      this.setState({ selectedAsin: asin });
+    }
+  };
+
   // STEP 5: RENDER METHOD
   render() {
     // Estraiamo books dalle props
     const { books } = this.props;
 
     // Estraiamo searchQuery dallo state
-    const { searchQuery } = this.state;
+    const { searchQuery, selectedAsin } = this.state;
 
     // STEP 6: FILTRIAMO I LIBRI in base alla ricerca
     const filteredBooks = books.filter((book) => {
@@ -69,14 +84,28 @@ class BookList extends Component {
           </Col>
         </Row>
 
-        {/* STEP 8: Griglia dei libri FILTRATI */}
-        <Row className="g-3">
-          {/* ⚠️ IMPORTANTE: Usiamo filteredBooks invece di books */}
-          {filteredBooks.map((book) => (
-            <Col xs={12} sm={6} md={4} lg={3} key={book.asin}>
-              <SingleBook book={book} />
-            </Col>
-          ))}
+        {/* STEP 8: Layout a DUE COLONNE */}
+        <Row>
+          {/* COLONNA SINISTRA: Griglia libri (8 colonne su 12) */}
+          <Col md={8}>
+            <Row className="g-3">
+              {/* ⚠️ IMPORTANTE: Usiamo filteredBooks invece di books */}
+              {filteredBooks.map((book) => (
+                <Col xs={12} sm={6} md={6} lg={4} key={book.asin}>
+                  <SingleBook
+                    book={book}
+                    selectedAsin={selectedAsin}
+                    onBookSelect={this.handleBookSelect}
+                  />
+                </Col>
+              ))}
+            </Row>
+          </Col>
+
+          {/* COLONNA DESTRA: CommentArea (4 colonne su 12) */}
+          <Col md={4}>
+            <CommentArea asin={selectedAsin} />
+          </Col>
         </Row>
 
         {/* STEP 9: Messaggio se non ci sono risultati */}

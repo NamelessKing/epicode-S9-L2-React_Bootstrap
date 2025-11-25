@@ -3,8 +3,9 @@ import { ListGroup } from "react-bootstrap";
 import SingleComment from "./SingleComment";
 
 // 2. Componente FUNZIONALE (semplice, non serve state)
-const CommentsList = ({ comments }) => {
+const CommentsList = ({ comments, onDelete }) => {
   // comments = array di oggetti commento ricevuto dal padre (CommentArea)
+  // onDelete = callback da passare a SingleComment per gestire l'eliminazione
   // Esempio: [{ _id: "123", comment: "Great!", rate: "5", elementId: "..." }, ...]
 
   return (
@@ -23,7 +24,12 @@ const CommentsList = ({ comments }) => {
           {comments.map((comment) => (
             // 4. Per ogni commento, renderizziamo SingleComment
             // KEY: usiamo _id (univoco per ogni commento)
-            <SingleComment key={comment._id} comment={comment} />
+            // PROPS: passiamo comment e onDelete
+            <SingleComment
+              key={comment._id}
+              comment={comment}
+              onDelete={onDelete}
+            />
           ))}
         </ListGroup>
       )}

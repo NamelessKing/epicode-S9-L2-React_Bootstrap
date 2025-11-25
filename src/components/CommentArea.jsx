@@ -1,8 +1,10 @@
 // 1. Import necessari
 import { Component } from "react";
-import { Card, Badge, Spinner, Alert } from "react-bootstrap";
+import { Card, Badge } from "react-bootstrap";
 import CommentsList from "./CommentsList";
 import AddComment from "./AddComment";
+import Loading from "./Loading";
+import Error from "./Error";
 
 // ⭐ IMPORTANTE: Sostituisci con il TUO token!
 const API_TOKEN =
@@ -71,7 +73,33 @@ class CommentArea extends Component {
 
   // ⭐ componentDidMount - Carica i commenti al primo mount
   componentDidMount() {
-    this.fetchComments();
+    // Facciamo fetch SOLO se c'è un ASIN valido
+    if (this.props.asin) {
+      this.fetchComments();
+    }
+  }
+
+  // ⭐ componentDidUpdate - Rileva quando cambia l'ASIN
+  componentDidUpdate(prevProps) {
+    // prevProps = le props PRIMA dell'aggiornamento
+    // this.props = le props DOPO l'aggiornamento
+
+    // Controlliamo se l'ASIN è cambiato
+    if (prevProps.asin !== this.props.asin) {
+      console.log("📘 ASIN cambiato da", prevProps.asin, "a", this.props.asin);
+
+      // Se il nuovo ASIN è valido (non null), facciamo fetch
+      if (this.props.asin) {
+        this.fetchComments();
+      } else {
+        // Se ASIN è null, resettiamo i commenti
+        this.setState({
+          comments: [],
+          isLoading: false,
+          errMsg: "",
+        });
+      }
+    }
   }
 
   // ⭐ Callback da passare ad AddComment
@@ -82,11 +110,36 @@ class CommentArea extends Component {
     this.fetchComments();
   };
 
+  // ⭐ Callback da passare a CommentsList (e poi a SingleComment)
+  // Viene chiamato DOPO che un commento è stato eliminato con successo
+  handleCommentDeleted = () => {
+    console.log("🔄 Ricaricamento commenti dopo eliminazione...");
+    // Richiama la fetch per aggiornare la lista
+    this.fetchComments();
+  };
+
   // 5. RENDER METHOD
   render() {
     // Estraiamo dallo state
     const { comments, isLoading, errMsg } = this.state;
-    const { asin: _asin } = this.props;
+    const { asin } = this.props;
+
+    // Se non c'è ASIN, mostra messaggio placeholder
+    if (!asin) {
+      return (
+        <Card className="mt-3 border-primary">
+          <Card.Header className="bg-primary text-white">
+            <h5 className="mb-0">💬 Area Commenti</h5>
+          </Card.Header>
+          <Card.Body>
+            <div className="text-center text-muted py-5">
+              <h4>📚 Seleziona un libro</h4>
+              <p>Clicca su un libro a sinistra per vedere i commenti</p>
+            </div>
+          </Card.Body>
+        </Card>
+      );
+    }
 
     return (
       <Card className="mt-3 border-primary">
@@ -99,26 +152,20 @@ class CommentArea extends Component {
           </h5>
         </Card.Header>
         <Card.Body>
-          {/* ⭐ LOADING: Mostra spinner se isLoading = true */}
-          {isLoading && (
-            <div className="text-center my-3">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2 text-muted">Caricamento commenti...</p>
-            </div>
-          )}
+          {/* ⭐ LOADING: Usa componente Loading */}
+          {isLoading && <Loading message="Caricamento commenti..." />}
 
-          {/* ⭐ ERROR: Mostra alert se c'è un errore */}
-          {errMsg && (
-            <Alert variant="danger">
-              <strong>Errore!</strong> {errMsg}
-            </Alert>
-          )}
+          {/* ⭐ ERROR: Usa componente Error */}
+          {errMsg && <Error message={errMsg} />}
 
           {/* ⭐ SUCCESS: Mostra i componenti se non c'è loading né errore */}
           {!isLoading && !errMsg && (
             <>
               {/* Componente CommentsList - Mostra la lista dei commenti */}
-              <CommentsList comments={comments} />
+              <CommentsList
+                comments={comments}
+                onDelete={this.handleCommentDeleted}
+              />
 
               {/* Separatore visivo */}
               <hr className="my-4" />
